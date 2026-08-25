@@ -1,0 +1,117 @@
+{
+  "annotations": {"list": []},
+  "editable": false,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {"type": "tempo", "uid": "tempo"},
+      "fieldConfig": {"defaults": {"color": {"fixedColor": "green", "mode": "fixed"}, "unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 6, "x": 0, "y": 0},
+      "id": 1,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["sum"], "fields": "", "values": false}, "textMode": "auto"},
+      "targets": [{"datasource": {"type": "tempo", "uid": "tempo"}, "limit": 20, "metricsQueryType": "range", "query": "{ resource.service.name = \"stowmark\" && span:name = \"create-snapshot\" } | count_over_time()", "queryType": "traceql", "range": true, "refId": "A", "tableType": "traces"}],
+      "title": "Create snapshot executions",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "tempo", "uid": "tempo"},
+      "fieldConfig": {"defaults": {"color": {"fixedColor": "red", "mode": "fixed"}, "unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 6, "x": 6, "y": 0},
+      "id": 2,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["sum"], "fields": "", "values": false}, "textMode": "auto"},
+      "targets": [{"datasource": {"type": "tempo", "uid": "tempo"}, "limit": 20, "metricsQueryType": "range", "query": "{ resource.service.name = \"stowmark\" && status = error } | count_over_time()", "queryType": "traceql", "range": true, "refId": "A", "tableType": "traces"}],
+      "title": "Errors",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"color": {"fixedColor": "orange", "mode": "fixed"}, "unit": "s"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 6, "x": 12, "y": 0},
+      "id": 3,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+      "targets": [{"expr": "histogram_quantile(0.95, sum by (le) (rate(stowmark_operation_duration_seconds_bucket{service_name=\"stowmark\"}[5m])))", "legendFormat": "p95", "refId": "A"}],
+      "title": "Duration p95",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "tempo", "uid": "tempo"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}, "unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 6, "x": 18, "y": 0},
+      "id": 10,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["sum"], "fields": "", "values": false}, "textMode": "auto"},
+      "targets": [{"datasource": {"type": "tempo", "uid": "tempo"}, "legendFormat": "Files failed", "metricsQueryType": "range", "query": "{ resource.service.name = \"stowmark\" && span.snapshot.total_files_failed != nil } | sum_over_time(span.snapshot.total_files_failed)", "queryType": "traceql", "range": true, "refId": "A", "tableType": "traces"}],
+      "title": "Restore files failed",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "tempo", "uid": "tempo"},
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "custom": {"axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "drawStyle": "bars", "fillOpacity": 80, "gradientMode": "none", "hideFrom": {"legend": false, "tooltip": false, "viz": false}, "lineInterpolation": "linear", "lineWidth": 0, "pointSize": 5, "scaleDistribution": {"type": "linear"}, "showPoints": "never", "spanNulls": false, "stacking": {"group": "A", "mode": "none"}, "thresholdsStyle": {"mode": "off"}}, "decimals": 2, "unit": "s"}, "overrides": []},
+      "gridPos": {"h": 9, "w": 12, "x": 0, "y": 8},
+      "id": 4,
+      "options": {"legend": {"calcs": ["max"], "displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"datasource": {"type": "tempo", "uid": "tempo"}, "metricsQueryType": "range", "query": "{ resource.service.name = \"stowmark\" } | max_over_time(span:duration) by (span:name)", "queryType": "traceql", "range": true, "refId": "A", "tableType": "traces"}],
+      "title": "Command duration by execution",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 9, "w": 12, "x": 12, "y": 8},
+      "id": 5,
+      "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": false, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true},
+      "targets": [{"expr": "{service_name=\"stowmark\"}", "queryType": "range", "refId": "A"}],
+      "title": "Recent logs",
+      "type": "logs"
+    },
+    {
+      "datasource": {"type": "tempo", "uid": "tempo"},
+      "fieldConfig": {"defaults": {"color": {"fixedColor": "blue", "mode": "fixed"}, "custom": {"axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "drawStyle": "bars", "fillOpacity": 80, "gradientMode": "none", "hideFrom": {"legend": false, "tooltip": false, "viz": false}, "lineInterpolation": "linear", "lineWidth": 0, "pointSize": 5, "scaleDistribution": {"type": "linear"}, "showPoints": "never", "spanNulls": false, "stacking": {"group": "A", "mode": "none"}, "thresholdsStyle": {"mode": "off"}}, "decimals": 0, "unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 17},
+      "id": 6,
+      "options": {"legend": {"calcs": ["max"], "displayMode": "table", "placement": "bottom", "showLegend": false}, "tooltip": {"mode": "single", "sort": "none"}},
+      "targets": [{"datasource": {"type": "tempo", "uid": "tempo"}, "metricsQueryType": "range", "query": "{ resource.service.name = \"stowmark\" && span:name = \"create-snapshot\" && span.snapshot.file_count != nil } | max_over_time(span.snapshot.file_count)", "queryType": "traceql", "range": true, "refId": "A", "tableType": "traces"}],
+      "title": "Snapshot files by execution",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "tempo", "uid": "tempo"},
+      "fieldConfig": {"defaults": {"color": {"fixedColor": "purple", "mode": "fixed"}, "custom": {"axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "drawStyle": "bars", "fillOpacity": 80, "gradientMode": "none", "hideFrom": {"legend": false, "tooltip": false, "viz": false}, "lineInterpolation": "linear", "lineWidth": 0, "pointSize": 5, "scaleDistribution": {"type": "linear"}, "showPoints": "never", "spanNulls": false, "stacking": {"group": "A", "mode": "none"}, "thresholdsStyle": {"mode": "off"}}, "decimals": 2, "unit": "bytes"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 17},
+      "id": 8,
+      "options": {"legend": {"calcs": ["max"], "displayMode": "table", "placement": "bottom", "showLegend": false}, "tooltip": {"mode": "single", "sort": "none"}},
+      "targets": [{"datasource": {"type": "tempo", "uid": "tempo"}, "metricsQueryType": "range", "query": "{ resource.service.name = \"stowmark\" && span:name = \"create-snapshot\" && span.snapshot.total_size != nil } | max_over_time(span.snapshot.total_size)", "queryType": "traceql", "range": true, "refId": "A", "tableType": "traces"}],
+      "title": "Snapshot size by execution",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "tempo", "uid": "tempo"},
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "custom": {"axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "drawStyle": "bars", "fillOpacity": 80, "gradientMode": "none", "hideFrom": {"legend": false, "tooltip": false, "viz": false}, "lineInterpolation": "linear", "lineWidth": 0, "pointSize": 5, "scaleDistribution": {"type": "linear"}, "showPoints": "never", "spanNulls": false, "stacking": {"group": "A", "mode": "none"}, "thresholdsStyle": {"mode": "off"}}, "decimals": 0, "unit": "short"}, "overrides": [{"matcher": {"id": "byName", "options": "Files restored"}, "properties": [{"id": "color", "value": {"fixedColor": "green", "mode": "fixed"}}]}, {"matcher": {"id": "byName", "options": "Files failed"}, "properties": [{"id": "color", "value": {"fixedColor": "red", "mode": "fixed"}}]}]},
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 25},
+      "id": 9,
+      "options": {"legend": {"calcs": ["sum"], "displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"datasource": {"type": "tempo", "uid": "tempo"}, "legendFormat": "Files restored", "metricsQueryType": "range", "query": "{ resource.service.name = \"stowmark\" && span.snapshot.total_files_restored != nil } | max_over_time(span.snapshot.total_files_restored)", "queryType": "traceql", "range": true, "refId": "A", "tableType": "traces"}, {"datasource": {"type": "tempo", "uid": "tempo"}, "legendFormat": "Files failed", "metricsQueryType": "range", "query": "{ resource.service.name = \"stowmark\" && span.snapshot.total_files_failed != nil } | max_over_time(span.snapshot.total_files_failed)", "queryType": "traceql", "range": true, "refId": "B", "tableType": "traces"}],
+      "title": "Restore snapshot files by execution",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "tempo", "uid": "tempo"},
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 33},
+      "id": 7,
+      "options": {"cellHeight": "sm", "showHeader": true},
+      "targets": [{"query": "{ resource.service.name = \"stowmark\" }", "queryType": "traceql", "refId": "A", "tableType": "traces"}],
+      "title": "Recent traces",
+      "type": "table"
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 41,
+  "tags": ["stowmark", "opentelemetry"],
+  "templating": {"list": []},
+  "time": {"from": "now-6h", "to": "now"},
+  "timezone": "browser",
+  "title": "Stowmark Overview",
+  "uid": "stowmark-overview",
+  "version": 1
+}

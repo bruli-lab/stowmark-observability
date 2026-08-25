@@ -1,0 +1,50 @@
+version: "3"
+
+tasks:
+  default:
+    desc: Show help
+    cmds:
+      - task --list
+  init:
+    desc: Create the local environment file
+    cmds:
+      - test -f .env || cp .env.example .env
+
+  validate:
+    desc: Validate the resolved Compose configuration
+    cmds:
+      - docker compose config --quiet
+
+  up:
+    desc: Start the observability stack
+    deps: [init]
+    cmds:
+      - docker compose up -d
+
+  down:
+    desc: Stop the observability stack
+    cmds:
+      - docker compose down
+
+  logs:
+    desc: Follow stack logs
+    cmds:
+      - docker compose logs -f
+
+  status:
+    desc: Show container status
+    cmds:
+      - docker compose ps
+
+  clean:
+    desc: Stop the stack and remove its persistent volumes
+    prompt: This removes all local observability data. Continue?
+    cmds:
+      - docker compose down --volumes
+
+  package:
+    desc: Build the Debian package (for example, task package VERSION=0.1.0)
+    requires:
+      vars: [VERSION]
+    cmds:
+      - ./scripts/build-deb.sh {{.VERSION}}

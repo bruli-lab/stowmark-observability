@@ -1,0 +1,14 @@
+#!/bin/sh
+set -e
+
+if [ "$1" = "configure" ]; then
+    systemctl daemon-reload || true
+    systemctl enable stowmark-observability.service || true
+
+    if ! docker compose version >/dev/null 2>&1; then
+        echo "stowmark-observability requires Docker with the Compose v2 plugin." >&2
+        echo "Install Docker Compose before starting the service." >&2
+    fi
+fi
+
+exit 0

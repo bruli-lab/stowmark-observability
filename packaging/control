@@ -1,0 +1,11 @@
+Package: stowmark-observability
+Version: @VERSION@
+Section: admin
+Priority: optional
+Architecture: all
+Maintainer: Bruli Lab
+Depends: systemd
+Suggests: docker.io
+Description: Local observability stack for Stowmark
+ Grafana, Loki, Tempo, Prometheus and OpenTelemetry Collector,
+ managed as a Docker Compose stack through systemd.

@@ -1,0 +1,9 @@
+#!/bin/sh
+set -e
+
+if [ "$1" = "remove" ]; then
+    systemctl stop stowmark-observability.service || true
+    systemctl disable stowmark-observability.service || true
+fi
+
+exit 0

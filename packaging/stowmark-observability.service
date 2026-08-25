@@ -1,0 +1,21 @@
+[Unit]
+Description=Stowmark observability stack
+Documentation=https://github.com/bruli-lab/stowmark-observability
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+ConditionPathExists=/opt/stowmark-observability/compose.yaml
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/stowmark-observability
+EnvironmentFile=-/etc/default/stowmark-observability
+ExecStart=/usr/bin/env docker compose --env-file /etc/default/stowmark-observability -f /opt/stowmark-observability/compose.yaml up -d --remove-orphans
+ExecReload=/usr/bin/env docker compose --env-file /etc/default/stowmark-observability -f /opt/stowmark-observability/compose.yaml up -d --remove-orphans
+ExecStop=/usr/bin/env docker compose --env-file /etc/default/stowmark-observability -f /opt/stowmark-observability/compose.yaml down
+TimeoutStartSec=0
+TimeoutStopSec=120
+
+[Install]
+WantedBy=multi-user.target

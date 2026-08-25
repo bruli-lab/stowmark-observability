@@ -1,0 +1,24 @@
+{
+  "branches": ["main"],
+  "plugins": [
+    "@semantic-release/commit-analyzer",
+    "@semantic-release/release-notes-generator",
+    [
+      "@semantic-release/exec",
+      {
+        "prepareCmd": "./scripts/build-deb.sh ${nextRelease.version}"
+      }
+    ],
+    [
+      "@semantic-release/github",
+      {
+        "assets": [
+          {
+            "path": "dist/*.deb",
+            "label": "Stowmark Observability Debian package"
+          }
+        ]
+      }
+    ]
+  ]
+}
