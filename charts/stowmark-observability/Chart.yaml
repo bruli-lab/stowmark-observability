@@ -1,0 +1,37 @@
+apiVersion: v2
+
+name: stowmark-observability
+description: Observability stack for Stowmark using Grafana, Loki, Tempo, Prometheus and OpenTelemetry
+type: application
+
+version: 0.1.0
+appVersion: "0.1.0"
+
+dependencies:
+  # Chart 12.11.2 deploys Grafana 13.2.0
+  - name: grafana
+    repository: https://grafana-community.github.io/helm-charts
+    version: "12.11.2"
+
+  # Chart 18.5.1 deploys Loki 3.7.3
+  - name: loki
+    repository: https://grafana-community.github.io/helm-charts
+    version: "18.5.1"
+
+  # Latest monolithic Tempo chart.
+  # It deploys Tempo 2.10.8 by default.
+  - name: tempo
+    repository: https://grafana-community.github.io/helm-charts
+    version: "2.3.0"
+
+  # Chart 29.13.1 deploys Prometheus 3.12.0
+  - name: prometheus
+    repository: https://prometheus-community.github.io/helm-charts
+    version: "29.13.1"
+
+  # Latest Collector chart; deploys Collector 0.158.0 by default.
+  # The image can be overridden to 0.159.0 from values.yaml.
+  - name: opentelemetry-collector
+    alias: otelCollector
+    repository: https://open-telemetry.github.io/opentelemetry-helm-charts
+    version: "0.171.0"

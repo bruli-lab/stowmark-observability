@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "stowmark-observability.fullname" . }}-datasources
+  labels:
+    {{- include "stowmark-observability.labels" . | nindent 4 }}
+    grafana_datasource: "1"
+data:
+  datasources.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        uid: prometheus
+        type: prometheus
+        access: proxy
+        url: http://stowmark-prometheus
+        isDefault: true
+
+      - name: Loki
+        uid: loki
+        type: loki
+        access: proxy
+        url: http://stowmark-loki-gateway
+
+      - name: Tempo
+        uid: tempo
+        type: tempo
+        access: proxy
+        url: http://stowmark-tempo:3200

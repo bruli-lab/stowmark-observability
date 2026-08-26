@@ -1,0 +1,7 @@
+.DS_Store
+.git/
+.gitignore
+*.swp
+*.tmp
+*-rendered.yaml
+rendered.yaml
