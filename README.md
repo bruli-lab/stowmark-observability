@@ -6,8 +6,8 @@ logs, metrics, and traces from the Stowmark CLI and provides a preconfigured
 Grafana dashboard for inspecting snapshot creation, restore operations,
 failures, performance, and recent activity.
 
-The project is designed for a single host and can run directly with Docker
-Compose or as a Debian package managed by `systemd`.
+The project can run on a single host with Docker Compose, as a Debian package
+managed by `systemd`, or in Kubernetes using the included Helm chart.
 
 ## What it provides
 
@@ -18,8 +18,9 @@ Compose or as a Debian package managed by `systemd`.
 - Prometheus for application and collector metrics.
 - Persistent Docker volumes for all stored telemetry.
 - A Debian package that installs and registers the stack as a system service.
-- Automated semantic releases with the generated `.deb` attached to each
-  GitHub Release.
+- A Helm chart for Kubernetes deployments and disposable cluster tests.
+- Automated semantic releases with the generated `.deb` and Helm `.tgz`
+  attached to each GitHub Release.
 
 The Stowmark dashboard currently includes:
 
@@ -58,13 +59,16 @@ The Stowmark dashboard currently includes:
                         └────────────┘
 ```
 
-Only Grafana and the OTLP receiver are published on the host. Loki, Tempo, and
-Prometheus remain inside the Compose network.
+With Docker Compose, only Grafana and the OTLP receiver are published on the
+host. Loki, Tempo, and Prometheus remain inside the Compose network. The Helm
+chart exposes the same components as internal Kubernetes services by default.
 
 ## Requirements
 
 - Docker Engine
 - Docker Compose v2 (`docker compose`)
+- Kubernetes and Helm 3 (for Helm deployments)
+- `kubectl` configured for the target cluster (for Helm deployments)
 - [Task](https://taskfile.dev/) (optional, for convenience commands)
 
 Building a Debian package additionally requires `dpkg-deb`.
@@ -148,6 +152,216 @@ Docker volumes persist Grafana, Loki, Tempo, and Prometheus data. Loki retains
 seven days and Prometheus retains fifteen days by default. Tempo runs in
 monolithic mode with local persistent storage.
 
+## Helm chart
+
+The chart in `charts/stowmark-observability` deploys Grafana, Loki, Tempo,
+Prometheus, and the OpenTelemetry Collector. It provisions the Stowmark
+dashboard and Grafana data sources automatically.
+
+### Install from the repository
+
+Restore the dependency versions recorded in `Chart.lock`:
+
+```bash
+helm dependency build charts/stowmark-observability
+```
+
+Validate and inspect the rendered manifests before installing:
+
+```bash
+helm lint charts/stowmark-observability
+
+helm template stowmark \
+  charts/stowmark-observability \
+  --namespace stowmark \
+  > /tmp/stowmark.yaml
+```
+
+Install the stack:
+
+```bash
+helm upgrade --install stowmark \
+  charts/stowmark-observability \
+  --namespace stowmark \
+  --create-namespace \
+  --wait \
+  --timeout 15m
+```
+
+### Install a packaged release
+
+Download `stowmark-observability-<version>.tgz` from the corresponding GitHub
+Release and install it directly:
+
+```bash
+helm upgrade --install stowmark \
+  ./stowmark-observability-0.1.0.tgz \
+  --namespace stowmark \
+  --create-namespace \
+  --wait \
+  --timeout 15m
+```
+
+The packaged chart already contains its dependencies, so it does not require
+`helm dependency build`.
+
+### Persistence and cluster configuration
+
+Persistence is enabled by default without selecting a storage class. Kubernetes
+therefore uses the default `StorageClass` of the target cluster. Cluster-specific
+settings should be kept in a separate file rather than added to `values.yaml`:
+
+```yaml
+# values-production.yaml
+grafana:
+  persistence:
+    storageClassName: longhorn
+
+loki:
+  singleBinary:
+    persistence:
+      storageClass: longhorn
+
+tempo:
+  persistence:
+    storageClassName: longhorn
+
+prometheus:
+  server:
+    persistentVolume:
+      storageClass: longhorn
+```
+
+Apply the additional configuration with:
+
+```bash
+helm upgrade --install stowmark \
+  charts/stowmark-observability \
+  --namespace stowmark \
+  --create-namespace \
+  --values values-production.yaml
+```
+
+### Temporary test installation
+
+`values-test.yaml` disables persistent volumes so the complete installation can
+be removed without retaining telemetry data:
+
+```bash
+task helm:verify
+task helm:dry-run
+task helm:install
+task helm:status
+```
+
+The equivalent installation command is:
+
+```bash
+helm upgrade --install stowmark-test \
+  charts/stowmark-observability \
+  --namespace stowmark-test \
+  --create-namespace \
+  --values charts/stowmark-observability/values-test.yaml \
+  --wait \
+  --timeout 15m
+```
+
+### Access Grafana and OTLP
+
+Forward Grafana to <http://localhost:3000>:
+
+```bash
+task helm:grafana
+```
+
+Or use `kubectl` directly:
+
+```bash
+kubectl port-forward \
+  --namespace stowmark-test \
+  service/stowmark-grafana \
+  3000:80
+```
+
+Retrieve the generated Grafana administrator password:
+
+```bash
+kubectl get secret stowmark-grafana \
+  --namespace stowmark-test \
+  --output jsonpath='{.data.admin-password}' \
+  | base64 --decode
+
+echo
+```
+
+Forward both OTLP receiver ports:
+
+```bash
+task helm:otlp
+```
+
+Configure a Stowmark process running outside the cluster:
+
+```bash
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
+export OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+export OTEL_SERVICE_NAME=stowmark
+```
+
+A Stowmark workload in the same Kubernetes namespace can use the internal
+Collector service directly:
+
+```bash
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://stowmark-otel-collector:4318
+export OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+export OTEL_SERVICE_NAME=stowmark
+```
+
+### Diagnose the deployment
+
+```bash
+helm status stowmark-test --namespace stowmark-test
+kubectl get pods,services,pvc --namespace stowmark-test
+task helm:collector-logs
+```
+
+To inspect a failing workload:
+
+```bash
+kubectl describe pod <pod-name> --namespace stowmark-test
+kubectl logs <pod-name> --namespace stowmark-test --all-containers
+```
+
+### Package the chart locally
+
+```bash
+task helm:package VERSION=0.1.0
+```
+
+The version is injected into both `version` and `appVersion` inside the
+generated `dist/stowmark-observability-0.1.0.tgz`.
+
+### Uninstall
+
+Remove a normal release:
+
+```bash
+helm uninstall stowmark --namespace stowmark
+```
+
+Depending on the storage provisioner and subchart retention policies, PVCs may
+remain after uninstalling. Inspect them before deleting any stored telemetry:
+
+```bash
+kubectl get pvc --namespace stowmark
+```
+
+Remove the disposable test release and its namespace:
+
+```bash
+task helm:uninstall
+```
+
 ## Debian package
 
 Build a package locally with an explicit semantic version:
@@ -230,12 +444,13 @@ version:
 
 When a release is required, the GitHub Actions workflow:
 
-1. installs the locked release dependencies;
-2. validates the Docker Compose configuration;
+1. validates JSON files, scripts, Docker Compose, and the Helm chart;
+2. installs the locked release dependencies;
 3. calculates the semantic version;
 4. builds `stowmark-observability_<version>_all.deb`;
-5. creates the Git tag and GitHub Release;
-6. attaches the Debian package to the release.
+5. builds `stowmark-observability-<version>.tgz`;
+6. creates the Git tag and GitHub Release;
+7. attaches both packages to the release.
 
 For a project that should begin below `1.0.0`, create and push a `v0.0.0` tag
 on the bootstrap commit before merging the first `feat:` change. The first
