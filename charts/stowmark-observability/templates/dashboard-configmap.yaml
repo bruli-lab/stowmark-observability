@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-stowmark-dashboard
+  labels:
+    grafana_dashboard: "1"
+    app.kubernetes.io/name: stowmark-observability
+    app.kubernetes.io/instance: {{ .Release.Name }}
+data:
+  stowmark-overview.json: |
+{{ .Files.Get "dashboards/stowmark-overview.json" | indent 4 }}

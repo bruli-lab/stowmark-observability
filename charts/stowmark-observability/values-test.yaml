@@ -1,0 +1,17 @@
+grafana:
+  persistence:
+    enabled: false
+
+loki:
+  singleBinary:
+    persistence:
+      enabled: false
+
+tempo:
+  persistence:
+    enabled: false
+
+prometheus:
+  server:
+    persistentVolume:
+      enabled: false

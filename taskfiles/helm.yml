@@ -1,0 +1,100 @@
+version: "3"
+
+vars:
+  HELM_CHART: charts/stowmark-observability
+  HELM_RELEASE: '{{.RELEASE | default "stowmark-test"}}'
+  HELM_NAMESPACE: '{{.NAMESPACE | default "stowmark-test"}}'
+  HELM_VALUES: '{{.VALUES | default "charts/stowmark-observability/values-test.yaml"}}'
+  HELM_TIMEOUT: '{{.TIMEOUT | default "15m"}}'
+  HELM_RENDERED: '{{.RENDERED | default "/tmp/stowmark-test.yaml"}}'
+
+tasks:
+  deps:
+    desc: Restore Helm dependencies from Chart.lock
+    cmds:
+      - helm dependency build {{.HELM_CHART}}
+
+  deps:update:
+    desc: Update Helm dependencies and regenerate Chart.lock
+    cmds:
+      - helm dependency update {{.HELM_CHART}}
+
+  package:
+    desc: Package the Helm chart with an explicit semantic version
+    deps: [deps]
+    requires:
+      vars: [VERSION]
+    cmds:
+      - bash scripts/build-helm.sh {{.VERSION}}
+
+  lint:
+    desc: Lint the Helm chart with the test values
+    deps: [deps]
+    cmds:
+      - helm lint {{.HELM_CHART}} --values {{.HELM_VALUES}}
+
+  render:
+    desc: Render the test manifests locally
+    deps: [deps]
+    cmds:
+      - helm template {{.HELM_RELEASE}} {{.HELM_CHART}} --namespace {{.HELM_NAMESPACE}} --values {{.HELM_VALUES}} > {{.HELM_RENDERED}}
+      - echo "Rendered manifests written to {{.HELM_RENDERED}}"
+
+  verify:
+    desc: Build dependencies, lint and render the Helm chart
+    cmds:
+      - task: lint
+      - task: render
+      - test -s {{.HELM_RENDERED}}
+      - |
+        if grep -q '^kind: PersistentVolumeClaim$' {{.HELM_RENDERED}}; then
+          echo "Unexpected persistent volume claim found in test manifests" >&2
+          exit 1
+        fi
+      - grep -q 'stowmark-overview.json' {{.HELM_RENDERED}}
+      - echo "Helm test manifests contain the dashboard and no persistent volume claims"
+
+  dry-run:
+    desc: Validate a test installation against the current Kubernetes context
+    deps: [deps]
+    cmds:
+      - helm upgrade --install {{.HELM_RELEASE}} {{.HELM_CHART}} --namespace {{.HELM_NAMESPACE}} --create-namespace --values {{.HELM_VALUES}} --dry-run --debug
+
+  install:
+    desc: Install or upgrade the temporary test release
+    deps: [deps]
+    cmds:
+      - helm upgrade --install {{.HELM_RELEASE}} {{.HELM_CHART}} --namespace {{.HELM_NAMESPACE}} --create-namespace --values {{.HELM_VALUES}} --wait --timeout {{.HELM_TIMEOUT}}
+
+  status:
+    desc: Show the test release, pods, services and persistent volume claims
+    cmds:
+      - helm status {{.HELM_RELEASE}} --namespace {{.HELM_NAMESPACE}}
+      - kubectl get pods,services,pvc --namespace {{.HELM_NAMESPACE}}
+
+  test:
+    desc: Run Helm test hooks for the installed release
+    cmds:
+      - helm test {{.HELM_RELEASE}} --namespace {{.HELM_NAMESPACE}} --logs
+
+  collector-logs:
+    desc: Show recent OpenTelemetry Collector logs
+    cmds:
+      - kubectl logs --namespace {{.HELM_NAMESPACE}} deployment/stowmark-otel-collector --tail=100
+
+  grafana:
+    desc: Forward local port 3000 to the test Grafana service
+    cmds:
+      - kubectl port-forward --namespace {{.HELM_NAMESPACE}} service/stowmark-grafana 3000:80
+
+  otlp:
+    desc: Forward local OTLP ports to the test Collector service
+    cmds:
+      - kubectl port-forward --namespace {{.HELM_NAMESPACE}} service/stowmark-otel-collector 4317:4317 4318:4318
+
+  uninstall:
+    desc: Uninstall the temporary release and delete its namespace
+    prompt: This removes the Helm test release and all data in its namespace. Continue?
+    cmds:
+      - helm uninstall {{.HELM_RELEASE}} --namespace {{.HELM_NAMESPACE}} --wait
+      - kubectl delete namespace {{.HELM_NAMESPACE}} --ignore-not-found

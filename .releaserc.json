@@ -6,7 +6,7 @@
     [
       "@semantic-release/exec",
       {
-        "prepareCmd": "./scripts/build-deb.sh ${nextRelease.version}"
+        "prepareCmd": "bash scripts/build-release-assets.sh ${nextRelease.version}"
       }
     ],
     [
@@ -16,6 +16,10 @@
           {
             "path": "dist/*.deb",
             "label": "Stowmark Observability Debian package"
+          },
+          {
+            "path": "dist/stowmark-observability-*.tgz",
+            "label": "Stowmark Observability Helm chart"
           }
         ]
       }
