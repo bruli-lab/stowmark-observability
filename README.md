@@ -205,6 +205,49 @@ helm upgrade --install stowmark \
 The packaged chart already contains its dependencies, so it does not require
 `helm dependency build`.
 
+### Install from the published Helm repository
+
+Each GitHub Release publishes the packaged chart and updates the Helm repository
+hosted on GitHub Pages:
+
+```bash
+helm repo add stowmark https://bruli-lab.github.io/stowmark-observability
+helm repo update
+
+helm upgrade --install stowmark stowmark/stowmark-observability \
+  --namespace stowmark \
+  --create-namespace \
+  --wait \
+  --timeout 15m
+```
+
+An Argo CD `Application` can consume the same repository directly:
+
+```yaml
+spec:
+  source:
+    repoURL: https://bruli-lab.github.io/stowmark-observability
+    chart: stowmark-observability
+    targetRevision: 1.0.0
+    helm:
+      releaseName: stowmark
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: stowmark
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+```
+
+After enabling GitHub Pages for the repository, configure it to deploy from the
+`gh-pages` branch and the repository root. The publishing workflow updates this
+branch whenever a GitHub Release is published. To bootstrap the repository from
+an existing release, run the `Publish Helm repository` workflow manually and
+provide its tag, for example `v1.0.0`.
+
 ### Persistence and cluster configuration
 
 Persistence is enabled by default without selecting a storage class. Kubernetes
