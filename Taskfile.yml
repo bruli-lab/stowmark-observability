@@ -21,6 +21,11 @@ tasks:
     cmds:
       - docker compose config --quiet
 
+  validate:configs:
+    desc: Validate service configs with their images and check the dashboard copies
+    cmds:
+      - bash scripts/validate-configs.sh {{.CLI_ARGS}}
+
   up:
     desc: Start the observability stack
     deps: [init]

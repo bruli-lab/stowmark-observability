@@ -79,6 +79,9 @@ jobs:
             exit 1
           fi
 
+      - name: Validate service configurations and dashboard copies
+        run: bash scripts/validate-configs.sh /tmp/stowmark-test.yaml
+
   release:
     name: Release
     needs: validate
