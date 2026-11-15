@@ -4,3 +4,4 @@ build/
 dist/
 node_modules/
 /charts/stowmark-observability/charts
+docs/
