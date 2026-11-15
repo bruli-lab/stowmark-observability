@@ -9,8 +9,14 @@ vars:
   HELM_RENDERED: '{{.RENDERED | default "/tmp/stowmark-test.yaml"}}'
 
 tasks:
+  repos:
+    desc: Add the Helm repositories that host the chart dependencies
+    cmds:
+      - bash scripts/add-helm-repos.sh
+
   deps:
     desc: Restore Helm dependencies from Chart.lock
+    deps: [repos]
     cmds:
       - helm dependency build {{.HELM_CHART}}
 

@@ -22,7 +22,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Helm
         uses: azure/setup-helm@v5.0.1
@@ -30,11 +30,7 @@ jobs:
           version: v3.19.0
 
       - name: Add Helm repositories
-        run: |
-          helm repo add grafana-community https://grafana-community.github.io/helm-charts
-          helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-          helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
-          helm repo update
+        run: bash scripts/add-helm-repos.sh
 
       - name: Validate JSON files
         shell: bash
@@ -98,12 +94,12 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
@@ -114,11 +110,7 @@ jobs:
           version: v3.19.0
 
       - name: Add Helm repositories
-        run: |
-          helm repo add grafana-community https://grafana-community.github.io/helm-charts
-          helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-          helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
-          helm repo update
+        run: bash scripts/add-helm-repos.sh
 
       - name: Install release dependencies
         run: npm ci
