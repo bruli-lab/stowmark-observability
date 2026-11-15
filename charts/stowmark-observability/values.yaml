@@ -16,18 +16,21 @@ grafana:
     type: ClusterIP
     port: 80
 
+  # The sidecars only watch the release namespace, so several installations
+  # in one cluster do not load each other's dashboards and data sources.
+  rbac:
+    namespaced: true
+
   sidecar:
     dashboards:
       enabled: true
       label: grafana_dashboard
       labelValue: "1"
-      searchNamespace: ALL
 
     datasources:
       enabled: true
       label: grafana_datasource
       labelValue: "1"
-      searchNamespace: ALL
 
   grafana.ini:
     users:
@@ -179,8 +182,16 @@ prometheus:
   prometheus-pushgateway:
     enabled: false
 
+  # Same jobs as config/prometheus.yaml: Collector self-metrics (8888) and
+  # the Stowmark metrics exported by the Collector (8889).
   extraScrapeConfigs: |
-    - job_name: stowmark-otel-collector
+    - job_name: otel-collector
+      scrape_interval: 15s
+      static_configs:
+        - targets:
+            - stowmark-otel-collector:8888
+
+    - job_name: stowmark
       scrape_interval: 15s
       static_configs:
         - targets:
