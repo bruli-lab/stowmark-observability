@@ -5,6 +5,13 @@ if [ "$1" = "configure" ]; then
     systemctl daemon-reload || true
     systemctl enable stowmark-observability.service || true
 
+    # On upgrade ($2 is the previously configured version), restart the stack
+    # so the containers pick up the new Compose file and configuration.
+    # try-restart does nothing if the service was not running.
+    if [ -n "$2" ]; then
+        systemctl try-restart stowmark-observability.service || true
+    fi
+
     if ! docker compose version >/dev/null 2>&1; then
         echo "stowmark-observability requires Docker with the Compose v2 plugin." >&2
         echo "Install Docker Compose before starting the service." >&2

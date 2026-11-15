@@ -21,7 +21,7 @@ trap cleanup EXIT
 install -d \
     "$package_root/DEBIAN" \
     "$package_root/etc/default" \
-    "$package_root/etc/systemd/system" \
+    "$package_root/usr/lib/systemd/system" \
     "$package_root/opt/stowmark-observability" \
     "$output_dir"
 
@@ -31,7 +31,7 @@ cp -R "$project_dir/config" "$package_root/opt/stowmark-observability/config"
 cp -R "$project_dir/dashboards" "$package_root/opt/stowmark-observability/dashboards"
 
 install -m 0644 "$project_dir/packaging/stowmark-observability.service" \
-    "$package_root/etc/systemd/system/stowmark-observability.service"
+    "$package_root/usr/lib/systemd/system/stowmark-observability.service"
 install -m 0644 "$project_dir/packaging/stowmark-observability.env" \
     "$package_root/etc/default/stowmark-observability"
 

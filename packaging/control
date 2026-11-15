@@ -4,8 +4,9 @@ Section: admin
 Priority: optional
 Architecture: all
 Maintainer: Bruli Lab
-Depends: systemd
-Suggests: docker.io
+Depends: systemd,
+ docker.io | docker-ce,
+ docker-compose-v2 | docker-compose-plugin | docker-compose (>= 2)
 Description: Local observability stack for Stowmark
  Grafana, Loki, Tempo, Prometheus and OpenTelemetry Collector,
  managed as a Docker Compose stack through systemd.
