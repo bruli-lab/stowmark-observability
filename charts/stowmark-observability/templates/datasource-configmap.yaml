@@ -45,7 +45,6 @@ data:
             filterByTraceID: true
           tracesToMetrics:
             datasourceUid: prometheus
-          serviceMap:
-            datasourceUid: prometheus
+          # No serviceMap: see config/grafana/provisioning/datasources/datasources.yaml
           nodeGraph:
             enabled: true
