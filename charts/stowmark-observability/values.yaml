@@ -26,6 +26,11 @@ grafana:
       enabled: true
       label: grafana_dashboard
       labelValue: "1"
+      # Place dashboards in the folder named by this ConfigMap annotation
+      # ("Stowmark", as in Docker Compose).
+      folderAnnotation: grafana_folder
+      provider:
+        foldersFromFilesStructure: true
 
     datasources:
       enabled: true
@@ -182,6 +187,31 @@ prometheus:
   prometheus-pushgateway:
     enabled: false
 
+  # Only the Stowmark stack is scraped: disable the chart's cluster-wide
+  # Kubernetes jobs, and with them the ClusterRole they need.
+  rbac:
+    create: false
+
+  scrapeConfigs:
+    kubernetes-api-servers:
+      enabled: false
+    kubernetes-nodes:
+      enabled: false
+    kubernetes-nodes-cadvisor:
+      enabled: false
+    kubernetes-service-endpoints:
+      enabled: false
+    kubernetes-service-endpoints-slow:
+      enabled: false
+    prometheus-pushgateway:
+      enabled: false
+    kubernetes-services:
+      enabled: false
+    kubernetes-pods:
+      enabled: false
+    kubernetes-pods-slow:
+      enabled: false
+
   # Same jobs as config/prometheus.yaml: Collector self-metrics (8888) and
   # the Stowmark metrics exported by the Collector (8889).
   extraScrapeConfigs: |
@@ -212,7 +242,24 @@ otelCollector:
   command:
     name: otelcol-contrib
 
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+
   ports:
+    # Only OTLP and the metrics endpoints are used.
+    jaeger-compact:
+      enabled: false
+    jaeger-thrift:
+      enabled: false
+    jaeger-grpc:
+      enabled: false
+    zipkin:
+      enabled: false
+
     otlp:
       enabled: true
       containerPort: 4317
@@ -251,11 +298,17 @@ otelCollector:
           http:
             endpoint: 0.0.0.0:4318
 
+      # Drop the chart's default receivers; only OTLP is used.
+      jaeger: null
+      zipkin: null
+      prometheus: null
+
     processors:
+      # The chart's defaults size the limiter as a percentage (80% / 25%) of
+      # resources.limits.memory. Do not set limit_mib/spike_limit_mib here:
+      # they would be merged with the percentages (and null is kept literally).
       memory_limiter:
         check_interval: 1s
-        limit_mib: 256
-        spike_limit_mib: 64
 
       batch:
         timeout: 5s

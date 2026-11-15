@@ -3,34 +3,50 @@ apiVersion: v2
 name: stowmark-observability
 description: Observability stack for Stowmark using Grafana, Loki, Tempo, Prometheus and OpenTelemetry
 type: application
+home: https://github.com/bruli-lab/stowmark-observability
+sources:
+  - https://github.com/bruli-lab/stowmark-observability
+  - https://github.com/bruli-lab/stowmark
+keywords:
+  - stowmark
+  - observability
+  - opentelemetry
+  - grafana
+maintainers:
+  - name: Bruli Lab
+    url: https://github.com/bruli-lab
 
+# Placeholder versions: the release pipeline injects the real version into
+# both fields when packaging (scripts/build-helm.sh).
 version: 0.1.0
 appVersion: "0.1.0"
 
 dependencies:
-  # Chart 12.11.2 deploys Grafana 13.2.0
+  # Chart 12.11.2 deploys Grafana 13.2.0 (same as Docker Compose).
   - name: grafana
     repository: https://grafana-community.github.io/helm-charts
     version: "12.11.2"
 
-  # Chart 18.5.1 deploys Loki 3.7.3
+  # Chart 18.5.1 deploys Loki 3.7.3 (same as Docker Compose).
   - name: loki
     repository: https://grafana-community.github.io/helm-charts
     version: "18.5.1"
 
-  # Latest monolithic Tempo chart.
-  # It deploys Tempo 2.10.8 by default.
+  # Monolithic Tempo chart 2.3.0 deploys Tempo 2.10.8, while Docker Compose
+  # runs Tempo 3.0.0. The chart renders a 2.x configuration, so its image
+  # cannot be moved to 3.x; TraceQL metrics therefore rely on the
+  # metrics-generator local-blocks processor configured in values.yaml.
   - name: tempo
     repository: https://grafana-community.github.io/helm-charts
     version: "2.3.0"
 
-  # Chart 29.13.1 deploys Prometheus 3.12.0
+  # Chart 29.13.1 deploys Prometheus 3.12.0 (same as Docker Compose).
   - name: prometheus
     repository: https://prometheus-community.github.io/helm-charts
     version: "29.13.1"
 
-  # Latest Collector chart; deploys Collector 0.158.0 by default.
-  # The image can be overridden to 0.159.0 from values.yaml.
+  # Chart 0.171.0 deploys Collector 0.158.0 by default; values.yaml pins
+  # 0.159.0 to match Docker Compose.
   - name: opentelemetry-collector
     alias: otelCollector
     repository: https://open-telemetry.github.io/opentelemetry-helm-charts
