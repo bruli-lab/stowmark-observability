@@ -43,5 +43,7 @@ install -m 0755 "$project_dir/packaging/prerm" "$package_root/DEBIAN/prerm"
 install -m 0755 "$project_dir/packaging/postrm" "$package_root/DEBIAN/postrm"
 
 chmod -R u=rwX,go=rX "$package_root"
+# The environment file holds the Grafana administrator password.
+chmod 0640 "$package_root/etc/default/stowmark-observability"
 dpkg-deb --root-owner-group --build "$package_root" "$output_file"
 echo "Built $output_file"
