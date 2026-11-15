@@ -142,6 +142,7 @@ and the OTLP endpoints with a firewall, VPN, or authenticated reverse proxy.
 
 ```bash
 task validate  # Validate the resolved Compose configuration
+task validate:configs  # Validate Collector, Prometheus, Loki and Tempo configs
 task status    # Show container status
 task logs      # Follow logs from all services
 task down      # Stop the stack and preserve data
@@ -428,7 +429,11 @@ The package installs:
 | --- | --- |
 | `/opt/stowmark-observability` | Compose file, service configuration, and dashboards. |
 | `/etc/default/stowmark-observability` | Editable runtime environment (mode `0640`, it contains the Grafana password). |
-| `/etc/systemd/system/stowmark-observability.service` | System service definition. |
+| `/usr/lib/systemd/system/stowmark-observability.service` | System service definition. |
+
+The package depends on Docker (`docker.io` or `docker-ce`) and the Compose v2
+plugin (`docker-compose-v2` or `docker-compose-plugin`). Upgrading the package
+restarts the stack if it was running.
 
 The service is enabled during installation but is not started automatically,
 so `apt` does not unexpectedly download container images. The first start can
@@ -442,7 +447,7 @@ continue running.
 sudo systemctl start stowmark-observability
 sudo systemctl stop stowmark-observability
 sudo systemctl restart stowmark-observability
-sudo systemctl reload stowmark-observability
+sudo systemctl reload stowmark-observability   # recreates the containers to apply config changes
 systemctl status stowmark-observability
 journalctl -u stowmark-observability
 ```
@@ -489,7 +494,9 @@ version:
 
 When a release is required, the GitHub Actions workflow:
 
-1. validates JSON files, scripts, Docker Compose, and the Helm chart;
+1. validates JSON files, scripts, Docker Compose, the Helm chart, the service
+   configurations (with each service's own validator), and that both dashboard
+   copies are identical;
 2. installs the locked release dependencies;
 3. calculates the semantic version;
 4. builds `stowmark-observability_<version>_all.deb`;
