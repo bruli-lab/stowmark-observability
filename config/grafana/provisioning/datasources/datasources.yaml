@@ -36,7 +36,7 @@ datasources:
         filterByTraceID: true
       tracesToMetrics:
         datasourceUid: prometheus
-      serviceMap:
-        datasourceUid: prometheus
+      # No serviceMap: Stowmark is a single service, and a service graph needs
+      # Tempo's service-graphs processor writing metrics to Prometheus.
       nodeGraph:
         enabled: true
