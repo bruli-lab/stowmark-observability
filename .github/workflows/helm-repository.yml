@@ -1,5 +1,8 @@
 name: Publish Helm repository
 
+# Releases created by semantic-release use GITHUB_TOKEN and therefore do not
+# emit a `release` event to other workflows; the Release workflow dispatches
+# this one explicitly. The `release` trigger covers manually published releases.
 on:
   release:
     types:
