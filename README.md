@@ -36,27 +36,21 @@ The Stowmark dashboard currently includes:
 ## Architecture
 
 ```text
-                     ┌──────────────┐
-                     │   Stowmark   │
-                     └──────┬───────┘
-                            │ OTLP
-                     HTTP :4318 / gRPC :4317
-                            │
-                ┌───────────▼────────────┐
-                │ OpenTelemetry Collector│
-                └──────┬──────┬──────┬──┘
-                       │      │      │
-                    logs   metrics  traces
-                       │      │      │
-                  ┌────▼─┐ ┌──▼───┐ ┌▼──────┐
-                  │ Loki │ │Prometheus│ Tempo │
-                  └────┬─┘ └──┬───┘ └┬──────┘
-                       │      │      │
-                       └──────┼──────┘
-                              │
-                        ┌─────▼──────┐
-                        │  Grafana   │ :3000
-                        └────────────┘
+                      ┌──────────────┐
+                      │   Stowmark   │
+                      └──────┬───────┘
+                             │ OTLP: HTTP :4318 / gRPC :4317
+            ┌────────────────▼────────────────┐
+            │     OpenTelemetry Collector     │
+            └───┬────────────┬────────────┬───┘
+                │ logs       │ metrics    │ traces
+            ┌───▼───┐   ┌────▼─────┐  ┌───▼───┐
+            │ Loki  │   │Prometheus│  │ Tempo │
+            └───┬───┘   └────┬─────┘  └───┬───┘
+                └────────────┼────────────┘
+                       ┌─────▼──────┐
+                       │  Grafana   │ :3000
+                       └────────────┘
 ```
 
 With Docker Compose, only Grafana and the OTLP receiver are published on the
@@ -157,13 +151,17 @@ monolithic mode with local persistent storage.
 
 The chart in `charts/stowmark-observability` deploys Grafana, Loki, Tempo,
 Prometheus, and the OpenTelemetry Collector. It provisions the Stowmark
-dashboard and Grafana data sources automatically.
+dashboard (in the "Stowmark" folder) and Grafana data sources automatically.
+Only the Stowmark stack is scraped: the Prometheus chart's cluster-wide
+Kubernetes jobs are disabled.
 
 ### Install from the repository
 
-Restore the dependency versions recorded in `Chart.lock`:
+Add the Helm repositories that host the dependencies, then restore the
+dependency versions recorded in `Chart.lock` (`task helm:deps` runs both):
 
 ```bash
+bash scripts/add-helm-repos.sh
 helm dependency build charts/stowmark-observability
 ```
 
@@ -196,7 +194,7 @@ Release and install it directly:
 
 ```bash
 helm upgrade --install stowmark \
-  ./stowmark-observability-0.1.0.tgz \
+  ./stowmark-observability-1.0.0.tgz \
   --namespace stowmark \
   --create-namespace \
   --wait \
@@ -381,11 +379,11 @@ kubectl logs <pod-name> --namespace stowmark-test --all-containers
 ### Package the chart locally
 
 ```bash
-task helm:package VERSION=0.1.0
+task helm:package VERSION=1.0.0
 ```
 
 The version is injected into both `version` and `appVersion` inside the
-generated `dist/stowmark-observability-0.1.0.tgz`.
+generated `dist/stowmark-observability-1.0.0.tgz`.
 
 ### Uninstall
 
@@ -413,13 +411,13 @@ task helm:uninstall
 Build a package locally with an explicit semantic version:
 
 ```bash
-task package VERSION=0.1.0
+task package VERSION=1.0.0
 ```
 
 The package is written to `dist/` and can be installed with:
 
 ```bash
-sudo apt install ./dist/stowmark-observability_0.1.0_all.deb
+sudo apt install ./dist/stowmark-observability_1.0.0_all.deb
 sudo systemctl start stowmark-observability
 ```
 
@@ -503,7 +501,3 @@ When a release is required, the GitHub Actions workflow:
 5. builds `stowmark-observability-<version>.tgz`;
 6. creates the Git tag and GitHub Release;
 7. attaches both packages to the release.
-
-For a project that should begin below `1.0.0`, create and push a `v0.0.0` tag
-on the bootstrap commit before merging the first `feat:` change. The first
-feature release will then be `v0.1.0`.
