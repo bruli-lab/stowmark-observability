@@ -9,9 +9,13 @@ services:
     ports:
       - "${BIND_ADDRESS:-127.0.0.1}:${OTLP_GRPC_PORT:-4317}:4317"
       - "${BIND_ADDRESS:-127.0.0.1}:${OTLP_HTTP_PORT:-4318}:4318"
+    # The Loki and Collector images have no shell or HTTP client, so only
+    # Tempo, Prometheus and Grafana have health checks.
     depends_on:
-      - loki
-      - tempo
+      loki:
+        condition: service_started
+      tempo:
+        condition: service_healthy
     restart: unless-stopped
 
   loki:
@@ -28,6 +32,12 @@ services:
     volumes:
       - ./config/tempo.yaml:/etc/tempo/config.yaml:ro
       - tempo-data:/var/tempo
+    healthcheck:
+      test: ["CMD", "/tempo", "-health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
     restart: unless-stopped
 
   prometheus:
@@ -40,8 +50,15 @@ services:
     volumes:
       - ./config/prometheus.yaml:/etc/prometheus/prometheus.yaml:ro
       - prometheus-data:/prometheus
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9090/-/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     depends_on:
-      - otel-collector
+      otel-collector:
+        condition: service_started
     restart: unless-stopped
 
   grafana:
@@ -57,10 +74,19 @@ services:
       - ./dashboards:/var/lib/grafana/dashboards:ro
     ports:
       - "${BIND_ADDRESS:-127.0.0.1}:${GRAFANA_PORT:-3000}:3000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     depends_on:
-      - prometheus
-      - loki
-      - tempo
+      prometheus:
+        condition: service_healthy
+      loki:
+        condition: service_started
+      tempo:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:
