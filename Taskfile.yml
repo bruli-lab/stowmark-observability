@@ -17,6 +17,7 @@ tasks:
 
   validate:
     desc: Validate the resolved Compose configuration
+    deps: [init]
     cmds:
       - docker compose config --quiet
 

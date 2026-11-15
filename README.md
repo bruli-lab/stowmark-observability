@@ -118,7 +118,7 @@ The runtime settings are read from `.env` when using Docker Compose and from
 | `BIND_ADDRESS` | `127.0.0.1` | Address used for published host ports. |
 | `GRAFANA_PORT` | `3000` | Grafana HTTP port. |
 | `GRAFANA_ADMIN_USER` | `admin` | Initial Grafana administrator. |
-| `GRAFANA_ADMIN_PASSWORD` | `change-me` | Initial Grafana password. |
+| `GRAFANA_ADMIN_PASSWORD` | Required (`change-me` in the examples) | Initial Grafana password. Compose refuses to start without it. |
 | `GRAFANA_ANONYMOUS_ENABLED` | `false` | Enables anonymous Grafana access. |
 | `OTLP_GRPC_PORT` | `4317` | OTLP/gRPC receiver port. |
 | `OTLP_HTTP_PORT` | `4318` | OTLP/HTTP receiver port. |
@@ -243,10 +243,12 @@ spec:
 ```
 
 After enabling GitHub Pages for the repository, configure it to deploy from the
-`gh-pages` branch and the repository root. The publishing workflow updates this
-branch whenever a GitHub Release is published. To bootstrap the repository from
-an existing release, run the `Publish Helm repository` workflow manually and
-provide its tag, for example `v1.0.0`.
+`gh-pages` branch and the repository root. After each semantic release, the
+Release workflow dispatches the `Publish Helm repository` workflow, which
+updates this branch. (Releases created with `GITHUB_TOKEN` do not trigger
+other workflows through the `release` event.) To publish an existing release,
+for example to bootstrap the repository, run the `Publish Helm repository`
+workflow manually and provide its tag, for example `v1.0.0`.
 
 ### Persistence and cluster configuration
 
@@ -425,7 +427,7 @@ The package installs:
 | Path | Purpose |
 | --- | --- |
 | `/opt/stowmark-observability` | Compose file, service configuration, and dashboards. |
-| `/etc/default/stowmark-observability` | Editable runtime environment. |
+| `/etc/default/stowmark-observability` | Editable runtime environment (mode `0640`, it contains the Grafana password). |
 | `/etc/systemd/system/stowmark-observability.service` | System service definition. |
 
 The service is enabled during installation but is not started automatically,
