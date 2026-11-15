@@ -54,8 +54,10 @@ if [[ -n "$rendered" ]]; then
     helm_config="$(mktemp)"
     trap 'rm -f "$helm_config"' EXIT
     # Extract data.relay from the stowmark-otel-collector ConfigMap.
+    # -r prints the raw string with both mikefarah/yq v4 (GitHub runners) and
+    # the Python yq wrapper around jq (Debian/Ubuntu package).
     if command -v yq >/dev/null 2>&1; then
-        yq 'select(.kind == "ConfigMap" and .metadata.name == "stowmark-otel-collector") | .data.relay' \
+        yq -r 'select(.kind == "ConfigMap" and .metadata.name == "stowmark-otel-collector") | .data.relay' \
             "$rendered" > "$helm_config"
     else
         python3 -I -c '
