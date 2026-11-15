@@ -98,6 +98,14 @@ loki:
   gateway:
     enabled: true
 
+  # The chart's memcached caches request ~11 GiB of memory by default
+  # (chunks ~9.6 GiB, results ~1.2 GiB); unnecessary for this workload.
+  chunksCache:
+    enabled: false
+
+  resultsCache:
+    enabled: false
+
   test:
     enabled: true
 
@@ -106,6 +114,24 @@ tempo:
 
   tempo:
     reportingEnabled: false
+    streamOverHttpEnabled: true
+
+    # The chart deploys Tempo 2.x, where TraceQL metrics queries (used by most
+    # dashboard panels) require the metrics-generator local-blocks processor.
+    # Tempo 3.x (Docker Compose) serves them natively from the live store.
+    metricsGenerator:
+      enabled: true
+      remoteWriteUrl: http://stowmark-prometheus/api/v1/write
+      processor:
+        local_blocks:
+          flush_to_storage: true
+          filter_server_spans: false
+
+    overrides:
+      defaults:
+        metrics_generator:
+          processors:
+            - local-blocks
 
     receivers:
       otlp:
@@ -135,6 +161,11 @@ prometheus:
         - ReadWriteOnce
 
     retention: 15d
+
+    # Accept remote writes from the Tempo metrics-generator.
+    extraFlags:
+      - web.enable-lifecycle
+      - web.enable-remote-write-receiver
 
   alertmanager:
     enabled: false
