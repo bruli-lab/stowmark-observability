@@ -6,7 +6,8 @@
     [
       "@semantic-release/exec",
       {
-        "prepareCmd": "bash scripts/build-release-assets.sh ${nextRelease.version}"
+        "prepareCmd": "bash scripts/build-release-assets.sh ${nextRelease.version}",
+        "successCmd": "gh workflow run helm-repository.yml --ref main -f release_tag=${nextRelease.gitTag}"
       }
     ],
     [
