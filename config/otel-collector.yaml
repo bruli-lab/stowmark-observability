@@ -13,13 +13,20 @@ processors:
     spike_limit_mib: 64
   batch:
     timeout: 5s
+  # Stowmark is a CLI: every run is a new process that reports cumulative
+  # counters starting from zero. Convert each run to deltas and sum them
+  # back into one running total per series, so Prometheus sees counters
+  # that keep growing across runs.
+  cumulative_to_delta: {}
+  delta_to_cumulative:
+    max_stale: 720h
 
 exporters:
-  otlphttp/loki:
+  otlp_http/loki:
     endpoint: http://loki:3100/otlp
     tls:
       insecure: true
-  otlp/tempo:
+  otlp_grpc/tempo:
     endpoint: tempo:4317
     tls:
       insecure: true
@@ -27,6 +34,9 @@ exporters:
     endpoint: 0.0.0.0:8889
     resource_to_telemetry_conversion:
       enabled: true
+    # Keep the accumulated totals between runs (the default is 5m, after
+    # which a CLI's series would vanish and restart from zero).
+    metric_expiration: 720h
 
 service:
   telemetry:
@@ -42,12 +52,12 @@ service:
     logs:
       receivers: [otlp]
       processors: [memory_limiter, batch]
-      exporters: [otlphttp/loki]
+      exporters: [otlp_http/loki]
     traces:
       receivers: [otlp]
       processors: [memory_limiter, batch]
-      exporters: [otlp/tempo]
+      exporters: [otlp_grpc/tempo]
     metrics:
       receivers: [otlp]
-      processors: [memory_limiter, batch]
+      processors: [memory_limiter, cumulative_to_delta, delta_to_cumulative, batch]
       exporters: [prometheus]
