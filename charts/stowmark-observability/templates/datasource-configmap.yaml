@@ -26,10 +26,13 @@ data:
         editable: false
         jsonData:
           derivedFields:
+            # Stowmark's OTLP logs carry trace_id as structured metadata.
             - name: TraceID
-              matcherRegex: 'trace_id[=\"]+([a-f0-9]{32})'
+              matcherType: label
+              matcherRegex: trace_id
               datasourceUid: tempo
-              url: '${__value.raw}'
+              # $$ escapes Grafana's environment variable expansion in provisioning.
+              url: '$${__value.raw}'
 
       - name: Tempo
         uid: tempo
