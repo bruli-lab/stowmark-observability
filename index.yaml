@@ -2,6 +2,46 @@ apiVersion: v1
 entries:
   stowmark-observability:
   - apiVersion: v2
+    appVersion: 1.1.0
+    created: "2026-11-16T12:51:49.024609337Z"
+    dependencies:
+    - name: grafana
+      repository: https://grafana-community.github.io/helm-charts
+      version: 12.11.2
+    - name: loki
+      repository: https://grafana-community.github.io/helm-charts
+      version: 18.5.1
+    - name: tempo
+      repository: https://grafana-community.github.io/helm-charts
+      version: 2.3.0
+    - name: prometheus
+      repository: https://prometheus-community.github.io/helm-charts
+      version: 29.13.1
+    - alias: otelCollector
+      name: opentelemetry-collector
+      repository: https://open-telemetry.github.io/opentelemetry-helm-charts
+      version: 0.171.0
+    description: Observability stack for Stowmark using Grafana, Loki, Tempo, Prometheus
+      and OpenTelemetry
+    digest: 67e37bb4926465e4500ee8da3df5a1c3fdb52acaef68d40e8c75d8679dbfa65b
+    home: https://github.com/bruli-lab/stowmark-observability
+    keywords:
+    - stowmark
+    - observability
+    - opentelemetry
+    - grafana
+    maintainers:
+    - name: Bruli Lab
+      url: https://github.com/bruli-lab
+    name: stowmark-observability
+    sources:
+    - https://github.com/bruli-lab/stowmark-observability
+    - https://github.com/bruli-lab/stowmark
+    type: application
+    urls:
+    - https://bruli-lab.github.io/stowmark-observability/stowmark-observability-1.1.0.tgz
+    version: 1.1.0
+  - apiVersion: v2
     appVersion: 1.0.1
     created: "2026-11-15T17:40:40.293408802Z"
     dependencies:
@@ -69,4 +109,4 @@ entries:
     urls:
     - https://bruli-lab.github.io/stowmark-observability/stowmark-observability-1.0.0.tgz
     version: 1.0.0
-generated: "2026-11-15T17:40:40.272692573Z"
+generated: "2026-11-16T12:51:48.997627157Z"
