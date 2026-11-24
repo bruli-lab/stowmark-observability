@@ -73,18 +73,20 @@ Create the local environment and start the stack:
 
 ```bash
 cp .env.example .env
+# Replace GRAFANA_ADMIN_PASSWORD=change-me in .env with a real password.
 docker compose up -d
 ```
 
-The equivalent Task command creates `.env` automatically when necessary:
+The equivalent Task command creates `.env` automatically when necessary, with
+a random `GRAFANA_ADMIN_PASSWORD`:
 
 ```bash
 task up
 ```
 
 Open Grafana at <http://localhost:3000>. The initial credentials are configured
-in `.env`. Change `GRAFANA_ADMIN_PASSWORD` before exposing Grafana outside the
-local machine.
+in `.env`. Grafana reads `GRAFANA_ADMIN_PASSWORD` only when it initialises its
+data volume; change the password in Grafana afterwards.
 
 Configure Stowmark to export telemetry using OTLP/HTTP:
 
@@ -112,7 +114,7 @@ The runtime settings are read from `.env` when using Docker Compose and from
 | `BIND_ADDRESS` | `127.0.0.1` | Address used for published host ports. |
 | `GRAFANA_PORT` | `3000` | Grafana HTTP port. |
 | `GRAFANA_ADMIN_USER` | `admin` | Initial Grafana administrator. |
-| `GRAFANA_ADMIN_PASSWORD` | Required (`change-me` in the examples) | Initial Grafana password. Compose refuses to start without it. |
+| `GRAFANA_ADMIN_PASSWORD` | Required (`change-me` in the examples) | Initial Grafana password. Compose refuses to start without it, `task init` generates a random one, and the Debian service refuses `change-me`. |
 | `GRAFANA_ANONYMOUS_ENABLED` | `false` | Enables anonymous Grafana access. |
 | `OTLP_GRPC_PORT` | `4317` | OTLP/gRPC receiver port. |
 | `OTLP_HTTP_PORT` | `4318` | OTLP/HTTP receiver port. |
@@ -144,8 +146,8 @@ task clean     # Stop the stack and permanently remove telemetry volumes
 ```
 
 Docker volumes persist Grafana, Loki, Tempo, and Prometheus data. Loki retains
-seven days and Prometheus retains fifteen days by default. Tempo runs in
-monolithic mode with local persistent storage.
+seven days, Tempo fourteen days and Prometheus fifteen days by default. Tempo
+runs in monolithic mode with local persistent storage.
 
 ## Helm chart
 
@@ -154,6 +156,12 @@ Prometheus, and the OpenTelemetry Collector. It provisions the Stowmark
 dashboard (in the "Stowmark" folder) and Grafana data sources automatically.
 Only the Stowmark stack is scraped: the Prometheus chart's cluster-wide
 Kubernetes jobs are disabled.
+
+The chart creates no cluster-scoped resources, so several releases can run in
+different namespaces. Install at most one release per namespace: the services
+use fixed names (`stowmark-grafana`, `stowmark-loki-gateway`, `stowmark-tempo`,
+`stowmark-prometheus`, `stowmark-otel-collector`), and the Loki and Tempo
+subcharts name some ConfigMaps after the chart rather than the release.
 
 ### Install from the repository
 
@@ -418,6 +426,7 @@ The package is written to `dist/` and can be installed with:
 
 ```bash
 sudo apt install ./dist/stowmark-observability_1.0.0_all.deb
+sudoedit /etc/default/stowmark-observability   # set GRAFANA_ADMIN_PASSWORD
 sudo systemctl start stowmark-observability
 ```
 
@@ -432,6 +441,10 @@ The package installs:
 The package depends on Docker (`docker.io` or `docker-ce`) and the Compose v2
 plugin (`docker-compose-v2` or `docker-compose-plugin`). Upgrading the package
 restarts the stack if it was running.
+
+The service refuses to start while `GRAFANA_ADMIN_PASSWORD` is empty or still
+`change-me`. An upgrade does not restart a running stack that still has the
+example password; set it and restart the service.
 
 The service is enabled during installation but is not started automatically,
 so `apt` does not unexpectedly download container images. The first start can

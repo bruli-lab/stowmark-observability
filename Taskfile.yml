@@ -11,9 +11,12 @@ tasks:
     cmds:
       - task --list
   init:
-    desc: Create the local environment file
+    desc: Create the local environment file with a random Grafana password
+    status:
+      - test -f .env
     cmds:
-      - test -f .env || cp .env.example .env
+      - sed "s/^GRAFANA_ADMIN_PASSWORD=.*/GRAFANA_ADMIN_PASSWORD=$(head -c 16 /dev/urandom | od -An -tx1 | tr -d ' \n')/" .env.example > .env
+      - echo "Created .env with a random GRAFANA_ADMIN_PASSWORD"
 
   validate:
     desc: Validate the resolved Compose configuration

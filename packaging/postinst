@@ -5,11 +5,25 @@ if [ "$1" = "configure" ]; then
     systemctl daemon-reload || true
     systemctl enable stowmark-observability.service || true
 
+    env_file=/etc/default/stowmark-observability
+    default_password=false
+    if grep -qx 'GRAFANA_ADMIN_PASSWORD=change-me' "$env_file" 2>/dev/null; then
+        default_password=true
+        echo "stowmark-observability: GRAFANA_ADMIN_PASSWORD in $env_file is still" >&2
+        echo "change-me; the service refuses to start until you change it." >&2
+    fi
+
     # On upgrade ($2 is the previously configured version), restart the stack
     # so the containers pick up the new Compose file and configuration.
-    # try-restart does nothing if the service was not running.
+    # try-restart does nothing if the service was not running. Skip it with
+    # the example password: the new start check would leave the stack down.
     if [ -n "$2" ]; then
-        systemctl try-restart stowmark-observability.service || true
+        if [ "$default_password" = true ]; then
+            echo "The running stack was not restarted; run" >&2
+            echo "'systemctl restart stowmark-observability' after setting the password." >&2
+        else
+            systemctl try-restart stowmark-observability.service || true
+        fi
     fi
 
     if ! docker compose version >/dev/null 2>&1; then

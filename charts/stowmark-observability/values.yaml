@@ -117,6 +117,16 @@ loki:
   test:
     enabled: true
 
+  # Loki rules are not used. The rules sidecar would otherwise need a
+  # ClusterRole that reads every ConfigMap and Secret in the cluster, and its
+  # fixed name would clash between releases in different namespaces.
+  sidecar:
+    rules:
+      enabled: false
+
+  rbac:
+    namespaced: true
+
 tempo:
   fullnameOverride: stowmark-tempo
 
@@ -124,22 +134,9 @@ tempo:
     reportingEnabled: false
     streamOverHttpEnabled: true
 
-    # The chart deploys Tempo 2.x, where TraceQL metrics queries (used by most
-    # dashboard panels) require the metrics-generator local-blocks processor.
-    # Tempo 3.x (Docker Compose) serves them natively from the live store.
-    metricsGenerator:
-      enabled: true
-      remoteWriteUrl: http://stowmark-prometheus/api/v1/write
-      processor:
-        local_blocks:
-          flush_to_storage: true
-          filter_server_spans: false
-
-    overrides:
-      defaults:
-        metrics_generator:
-          processors:
-            - local-blocks
+    # The chart defaults to 24h, shorter than the dashboard's 7-day range.
+    # 336h is Tempo's own default, which Docker Compose uses.
+    retention: 336h
 
     receivers:
       otlp:
@@ -170,10 +167,8 @@ prometheus:
 
     retention: 15d
 
-    # Accept remote writes from the Tempo metrics-generator.
     extraFlags:
       - web.enable-lifecycle
-      - web.enable-remote-write-receiver
 
   alertmanager:
     enabled: false

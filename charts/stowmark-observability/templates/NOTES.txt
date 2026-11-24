@@ -17,4 +17,4 @@ Sending telemetry from Stowmark
     kubectl port-forward --namespace {{ .Release.Namespace }} service/stowmark-otel-collector 4317:4317 4318:4318
     OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
 
-TraceQL metrics panels show data about 30 seconds after the first traces arrive.
+Dashboard panels show data within a minute of the first Stowmark run.

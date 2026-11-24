@@ -4,8 +4,8 @@
 #
 # Usage: scripts/validate-configs.sh [RENDERED_HELM_MANIFESTS]
 #   RENDERED_HELM_MANIFESTS  optional output of `helm template`; when given,
-#                            the Collector configuration rendered by the
-#                            chart is validated too.
+#                            the Collector and Tempo configurations rendered
+#                            by the chart are validated too.
 set -euo pipefail
 
 project_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -50,27 +50,44 @@ docker run --rm \
 echo "Tempo configuration is valid"
 
 if [[ -n "$rendered" ]]; then
-    echo "==> Helm Collector configuration ($rendered)"
-    helm_config="$(mktemp)"
-    trap 'rm -f "$helm_config"' EXIT
-    # Extract data.relay from the stowmark-otel-collector ConfigMap.
+    tmp_dir="$(mktemp -d)"
+    trap 'rm -rf "$tmp_dir"' EXIT
+
+    # extract CONFIGMAP KEY OUTPUT: write data.KEY of a rendered ConfigMap.
     # -r prints the raw string with both mikefarah/yq v4 (GitHub runners) and
     # the Python yq wrapper around jq (Debian/Ubuntu package).
-    if command -v yq >/dev/null 2>&1; then
-        yq -r 'select(.kind == "ConfigMap" and .metadata.name == "stowmark-otel-collector") | .data.relay' \
-            "$rendered" > "$helm_config"
-    else
-        python3 -I -c '
+    extract() {
+        if command -v yq >/dev/null 2>&1; then
+            yq -r "select(.kind == \"ConfigMap\" and .metadata.name == \"$1\") | .data[\"$2\"]" \
+                "$rendered" > "$3"
+        else
+            python3 -I -c '
 import sys, yaml
 for doc in yaml.safe_load_all(open(sys.argv[1])):
-    if doc and doc.get("kind") == "ConfigMap" and doc["metadata"]["name"] == "stowmark-otel-collector":
-        sys.stdout.write(doc["data"]["relay"])
-' "$rendered" > "$helm_config"
-    fi
-    test -s "$helm_config"
-    chmod 0644 "$helm_config"
+    if doc and doc.get("kind") == "ConfigMap" and doc["metadata"]["name"] == sys.argv[2]:
+        sys.stdout.write(doc["data"][sys.argv[3]])
+' "$rendered" "$1" "$2" > "$3"
+        fi
+        test -s "$3"
+        chmod 0644 "$3"
+    }
+
+    echo "==> Helm Collector configuration ($rendered)"
+    extract stowmark-otel-collector relay "$tmp_dir/otelcol.yaml"
     docker run --rm \
-        -v "$helm_config:/etc/otelcol/config.yaml:ro" \
+        -v "$tmp_dir/otelcol.yaml:/etc/otelcol/config.yaml:ro" \
         "$(image otel-collector)" validate --config=/etc/otelcol/config.yaml
     echo "Helm Collector configuration is valid"
+
+    # The Tempo chart names its ConfigMap "tempo" (chart name, not fullname)
+    # and mounts it on /conf.
+    echo "==> Helm Tempo configuration ($rendered)"
+    mkdir "$tmp_dir/tempo"
+    extract tempo tempo.yaml "$tmp_dir/tempo/tempo.yaml"
+    extract tempo overrides.yaml "$tmp_dir/tempo/overrides.yaml"
+    chmod 0755 "$tmp_dir" "$tmp_dir/tempo"
+    docker run --rm \
+        -v "$tmp_dir/tempo:/conf:ro" \
+        "$(image tempo)" -config.file=/conf/tempo.yaml -config.verify=true
+    echo "Helm Tempo configuration is valid"
 fi

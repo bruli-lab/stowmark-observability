@@ -32,13 +32,10 @@ dependencies:
     repository: https://grafana-community.github.io/helm-charts
     version: "18.5.1"
 
-  # Monolithic Tempo chart 2.3.0 deploys Tempo 2.10.8, while Docker Compose
-  # runs Tempo 3.0.0. The chart renders a 2.x configuration, so its image
-  # cannot be moved to 3.x; TraceQL metrics therefore rely on the
-  # metrics-generator local-blocks processor configured in values.yaml.
+  # Monolithic Tempo chart 3.2.1 deploys Tempo 3.1.1 (same as Docker Compose).
   - name: tempo
     repository: https://grafana-community.github.io/helm-charts
-    version: "2.3.0"
+    version: "3.2.1"
 
   # Chart 29.13.1 deploys Prometheus 3.12.0 (same as Docker Compose).
   - name: prometheus
