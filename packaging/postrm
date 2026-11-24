@@ -3,4 +3,10 @@ set -e
 
 systemctl daemon-reload || true
 
+# Remove the generated Grafana password on purge.
+if [ "$1" = "purge" ]; then
+    rm -f /var/lib/stowmark-observability/grafana.env
+    rmdir /var/lib/stowmark-observability 2>/dev/null || true
+fi
+
 exit 0

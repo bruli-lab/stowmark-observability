@@ -114,7 +114,7 @@ The runtime settings are read from `.env` when using Docker Compose and from
 | `BIND_ADDRESS` | `127.0.0.1` | Address used for published host ports. |
 | `GRAFANA_PORT` | `3000` | Grafana HTTP port. |
 | `GRAFANA_ADMIN_USER` | `admin` | Initial Grafana administrator. |
-| `GRAFANA_ADMIN_PASSWORD` | Required (`change-me` in the examples) | Initial Grafana password. Compose refuses to start without it, `task init` generates a random one, and the Debian service refuses `change-me`. |
+| `GRAFANA_ADMIN_PASSWORD` | Required (`change-me` in `.env.example`) | Initial Grafana password. Compose refuses to start without it, and `task init` generates a random one. The Debian package generates one in `/var/lib/stowmark-observability/grafana.env`. |
 | `GRAFANA_ANONYMOUS_ENABLED` | `false` | Enables anonymous Grafana access. |
 | `OTLP_GRPC_PORT` | `4317` | OTLP/gRPC receiver port. |
 | `OTLP_HTTP_PORT` | `4318` | OTLP/HTTP receiver port. |
@@ -426,7 +426,6 @@ The package is written to `dist/` and can be installed with:
 
 ```bash
 sudo apt install ./dist/stowmark-observability_1.0.0_all.deb
-sudoedit /etc/default/stowmark-observability   # set GRAFANA_ADMIN_PASSWORD
 sudo systemctl start stowmark-observability
 ```
 
@@ -435,16 +434,24 @@ The package installs:
 | Path | Purpose |
 | --- | --- |
 | `/opt/stowmark-observability` | Compose file, service configuration, and dashboards. |
-| `/etc/default/stowmark-observability` | Editable runtime environment (mode `0640`, it contains the Grafana password). |
+| `/etc/default/stowmark-observability` | Editable runtime environment (mode `0640`). A `GRAFANA_ADMIN_PASSWORD` set here overrides the generated one. |
+| `/var/lib/stowmark-observability/grafana.env` | Initial Grafana password, generated on the first installation (mode `0640`, removed on purge). |
 | `/usr/lib/systemd/system/stowmark-observability.service` | System service definition. |
 
 The package depends on Docker (`docker.io` or `docker-ce`) and the Compose v2
 plugin (`docker-compose-v2` or `docker-compose-plugin`). Upgrading the package
 restarts the stack if it was running.
 
-The service refuses to start while `GRAFANA_ADMIN_PASSWORD` is empty or still
-`change-me`. An upgrade does not restart a running stack that still has the
-example password; set it and restart the service.
+Sign in to Grafana as `admin` with the generated password:
+
+```bash
+sudo cat /var/lib/stowmark-observability/grafana.env
+```
+
+Grafana reads the password only when it initialises its data volume. An
+installation upgraded from a version that kept `GRAFANA_ADMIN_PASSWORD=change-me`
+in `/etc/default/stowmark-observability` keeps its current Grafana password;
+change it in Grafana.
 
 The service is enabled during installation but is not started automatically,
 so `apt` does not unexpectedly download container images. The first start can
@@ -467,6 +474,7 @@ Inspect the managed containers with:
 
 ```bash
 sudo docker compose \
+  --env-file /var/lib/stowmark-observability/grafana.env \
   --env-file /etc/default/stowmark-observability \
   -f /opt/stowmark-observability/compose.yaml \
   ps
@@ -485,6 +493,7 @@ package:
 
 ```bash
 sudo docker compose \
+  --env-file /var/lib/stowmark-observability/grafana.env \
   --env-file /etc/default/stowmark-observability \
   -f /opt/stowmark-observability/compose.yaml \
   down --volumes

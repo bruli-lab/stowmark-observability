@@ -6,24 +6,36 @@ if [ "$1" = "configure" ]; then
     systemctl enable stowmark-observability.service || true
 
     env_file=/etc/default/stowmark-observability
-    default_password=false
+    state_dir=/var/lib/stowmark-observability
+    password_file="$state_dir/grafana.env"
+
+    # Generate the initial Grafana password once, outside the conffile:
+    # maintainer scripts must not edit conffiles.
+    if [ ! -e "$password_file" ]; then
+        install -d -m 0750 "$state_dir"
+        password="$(od -An -tx1 -N16 /dev/urandom | tr -d ' \n')"
+        (umask 027 && printf 'GRAFANA_ADMIN_PASSWORD=%s\n' "$password" > "$password_file")
+        if [ -z "$2" ]; then
+            echo "stowmark-observability: the initial Grafana password (user admin) is in" >&2
+            echo "$password_file." >&2
+        else
+            # Upgrade from a version that kept the password in $env_file.
+            echo "stowmark-observability: generated a Grafana password in $password_file." >&2
+            echo "An existing Grafana keeps its current admin password: Grafana only" >&2
+            echo "reads the variable when it initialises its data volume." >&2
+        fi
+    fi
+
     if grep -qx 'GRAFANA_ADMIN_PASSWORD=change-me' "$env_file" 2>/dev/null; then
-        default_password=true
-        echo "stowmark-observability: GRAFANA_ADMIN_PASSWORD in $env_file is still" >&2
-        echo "change-me; the service refuses to start until you change it." >&2
+        echo "stowmark-observability: GRAFANA_ADMIN_PASSWORD=change-me in $env_file" >&2
+        echo "overrides the generated password; remove the line or set a real password." >&2
     fi
 
     # On upgrade ($2 is the previously configured version), restart the stack
     # so the containers pick up the new Compose file and configuration.
-    # try-restart does nothing if the service was not running. Skip it with
-    # the example password: the new start check would leave the stack down.
+    # try-restart does nothing if the service was not running.
     if [ -n "$2" ]; then
-        if [ "$default_password" = true ]; then
-            echo "The running stack was not restarted; run" >&2
-            echo "'systemctl restart stowmark-observability' after setting the password." >&2
-        else
-            systemctl try-restart stowmark-observability.service || true
-        fi
+        systemctl try-restart stowmark-observability.service || true
     fi
 
     if ! docker compose version >/dev/null 2>&1; then
